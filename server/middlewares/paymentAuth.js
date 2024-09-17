@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const UserAccount = require("../models/accounts/account");
+const UserAccount = require("../models/accounts/customer");
 
 const PaymentAuth = async (req, res, next) => {
   try {

@@ -1,52 +1,33 @@
 const jwt = require("jsonwebtoken");
-const UserAccount = require("../models/accounts/account");
 
-module.exports = {
-  authenticate: async (req, res, next) => {
-    const token = req.header("Autorization")?.replace("Bearer ", "");
-    if (!token) {
-      return res.status(401).json({
-        error: "No token provided.",
-      });
+const authMiddleware = (allowedRoles) => {
+  return (req, res, next) => {
+    // const token = req.header("Authorization").replace("Bearer ", "")
+    const authHeader = req.header("Authorization");
+    console.log("Auth Header: ", authHeader);
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res
+        .status(401)
+        .json({ error: "Authentication token is missing or malformed." });
     }
-    console.log("Extracted token"), token;
+    const token = authHeader.replace("Bearer ", "");
+    console.log("Token: ", token);
+    if (!token) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log("Decoded token payload: ", decoded);
-
-      const { _id: id, username } = decoded;
-
-      let User;
-      User = await UserAccount.findByUsername(username);
-      console.log("Found User: ", User);
-
-      if (!User) {
-        return res.status(401).json({
-          error: "User not found.",
-        });
+      if (!allowedRoles.includes(decoded.role)) {
+        return res.status(403).json({ error: "Insufficient permissions" });
       }
-
-      req.User = User;
-      return next();
+      req.user = decoded;
+      next();
     } catch (error) {
-      console.error("JWT verification error: ", error);
-      return res.status(401).json({
-        error: error.error,
-      });
+      res.status(401).json({ error: "Invalid token" });
     }
-  },
-
-  authorize: (user) => {
-    return (req, res, next) => {
-      console.log("Expected user: ", user);
-      console.log("Actual user: ", user);
-      if (req.user !== user) {
-        return res.status(403).json({
-          error: "Unauthorized.",
-        });
-      }
-      return next();
-    };
-  },
+  };
 };
+
+module.exports = authMiddleware;

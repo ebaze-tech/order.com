@@ -1,4 +1,7 @@
-const UserAccount = require("../../models/accounts/account");
+const CustomerModel = require("../../models/accounts/customer");
+const AdminModel = require("../../models/accounts/admin");
+const DeliveryAgentModel = require("../../models/accounts/deliveryAgent");
+
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -30,15 +33,45 @@ class Accounts {
         });
       }
 
+      let user;
+      let role;
+
+      // Check if the user is an admin
+      user = await AdminModel.findOne({ where: { email } });
+      if (user) {
+        role = "Admin";
+      }
+
+      // Check if the user is a customer
+      if (!user) {
+        user = await CustomerModel.findOne({ where: { email } });
+        if (user) {
+          role = "Customer";
+        }
+      }
+
+      // Check if the user is a delivery agent
+      if (!user) {
+        user = await DeliveryAgentModel.findOne({ where: { email } });
+        if (user) {
+          role = "Delivery Agent";
+        }
+      }
+
+      // If user is not found in any model
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
       //   Check if user already exists
-      let findByEmail = await UserAccount.findByEmail(email);
+      let findByEmail = await CustomerModel.findByEmail(email);
       if (findByEmail) {
         return res.status(400).json({
           error: "User with this email already exists. ",
         });
       }
 
-      let findByName = await UserAccount.findByName(name);
+      let findByName = await CustomerModel.findByName(name);
       if (findByName) {
         return res.status(400).json({
           error: "Name taken. Try another.",
@@ -49,20 +82,25 @@ class Accounts {
       const hashedPassword = await bcrypt.hash(password, 12);
 
       //   Create new user
-      const newUser = await UserAccount.create({
+      const newUser = await CustomerModel.create({
         email,
         password: hashedPassword,
         name,
         telephoneNumber,
       });
 
-      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-        expiresIn: "1d",
-      });
+      const token = jwt.sign(
+        { userId: user._id, role },
+        process.env.JWT_SECRET,
+        {
+          expiresIn: "1d",
+        }
+      );
 
       res.status(201).json({
         newUser,
         token,
+        role,
         message: "Account created successfully.",
       });
     } catch (error) {
@@ -87,7 +125,7 @@ class Accounts {
     try {
       // Check if user exists
       let user;
-      user = await UserAccount.findByEmail(email);
+      user = await CustomerModel.findByEmail(email);
       if (user) {
         return res.status(400).json({
           error: "User's email found.",
@@ -134,7 +172,7 @@ class Accounts {
     const { id } = req.params;
 
     try {
-      const user = await UserAccount.findById(id);
+      const user = await CustomerModel.findById(id);
       if (!user) {
         return res.status(404).json({
           error: "User not found",
@@ -154,7 +192,7 @@ class Accounts {
     const { email, name } = req.body;
 
     try {
-      const user = await UserAccount.findById(id);
+      const user = await CustomerModel.findById(id);
       if (!user) {
         return res.status(404).json({
           error: "User not found.",

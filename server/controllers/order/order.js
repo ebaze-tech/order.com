@@ -1,5 +1,5 @@
 const OrderModel = require("../../models/order/order");
-const UserAccount = require("../../models/accounts/account");
+const UserAccount = require("../../models/accounts/customer");
 
 class OrderController {
   // Create new order

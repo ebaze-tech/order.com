@@ -42,6 +42,10 @@ const User = sequelize.define(
       type: DataTypes.DATE,
       onUpdate: DataTypes.NOW,
     },
+    role: {
+      type: DataTypes.STRING,
+      defaultValue: 'Customer',
+    },
   },
   {
     timestamps: true,
